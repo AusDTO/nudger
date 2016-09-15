@@ -10,7 +10,14 @@ import (
 	"time"
 )
 
-func MockNewRelic(bind string) {
+func MockNewRelic(bind string, requests chan string) {
+	http.HandleFunc("/v2/applications/", func(w http.ResponseWriter, r *http.Request) {
+		response := ApplicationResponse{}
+		b, _ := json.Marshal(response)
+		w.Write(b)
+		requests <- "true" // FIXME(auxesis): inject the app id instead
+	})
+	log.Fatal(http.ListenAndServe(bind, nil))
 }
 
 func MockStatusPage(bind string, requests chan string) {
@@ -24,6 +31,35 @@ func MockStatusPage(bind string, requests chan string) {
 }
 
 func TestNewRelicPolling(t *testing.T) {
+	requests := make(chan string)
+
+	// Send a failure after one second. If everything is working, this should not happen.
+	go func() {
+		time.Sleep(1 * time.Second)
+		requests <- "false"
+	}()
+
+	// Setup a mock StatusPage that will received requests.
+	go MockNewRelic("127.0.0.1:43332", requests)
+
+	// Then make a request
+	config := Config{
+		NRBaseURL: "http://127.0.0.1:43332/v2/applications/",
+	}
+	metrics := make(chan Metric)
+	app := App{NRAppId: 123456}
+	go PollNR(config, app, metrics)
+
+	request := <-requests
+	switch request {
+	// Test the New Relic API is hit
+	case "true":
+		t.Log("Received request")
+	case "false":
+		t.Fatal("Expected request to New Relic, got nothing after 1 second.")
+	default:
+		t.Fatalf("Got: '%s'", request)
+	}
 }
 
 func TestStatusPagePushing(t *testing.T) {
