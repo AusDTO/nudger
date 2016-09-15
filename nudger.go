@@ -100,6 +100,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 	err = json.Unmarshal(body, &sample)
 	if err != nil {
 		log.Printf("[error] PollNR: couldn't decode json: %s", err)
+		log.Printf("[error] PollNR: raw body: %s\n", body)
 		return
 	}
 	if config.Debug {
