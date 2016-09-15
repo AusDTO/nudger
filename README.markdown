@@ -4,7 +4,7 @@ Nudger is a New Relic metrics importer for StatusPage.
 
 It periodically queries the New Relic REST API (v2), and sends those metrics to StatusPage.
 
-Nudger is different to the built in New Relic integration because it allows you to:
+Nudger is different to StatuPage's built-in New Relic integration because it allows you to:
 
  - Pull metrics from multiple New Relic accounts into a single StatusPage account.
  - Pull metrics from one New Relic account into multiple StatusPage accounts.
