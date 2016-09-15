@@ -63,6 +63,10 @@ type SPData struct {
 	Value     float64 `json:"value"`
 }
 
+type SPPayload struct {
+	Data SPData `json:"data"`
+}
+
 func PollNR(config Config, app App, metrics chan Metric) {
 	appid := strconv.Itoa(app.NRAppId)
 	parts := []string{config.NRBaseURL, appid, ".json"}
@@ -163,7 +167,12 @@ func Dispatch(config Config, metrics chan Metric) {
 			log.Printf("[debug] Dispatch: URL: %s", url)
 		}
 
-		payload := map[string]SPData{"data": SPData{Timestamp: int32(time.Now().Unix()), Value: metric.Value}}
+		payload := SPPayload{
+			Data: SPData{
+				Timestamp: int32(time.Now().Unix()),
+				Value:     metric.Value,
+			},
+		}
 		body, err := json.Marshal(payload)
 		if err != nil {
 			log.Printf("[error] Dispatch: JSON marshal: %s\n", err)
