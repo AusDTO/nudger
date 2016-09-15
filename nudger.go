@@ -96,22 +96,38 @@ func PollNR(config Config, app App, metrics chan Metric) {
 		log.Printf("[error] PollNR: couldn't decode json: %s", err)
 		return
 	}
-
-	m := Metric{SPPageId: app.SPPageId, SPApiKey: app.SPApiKey}
-	m.SPMetricId = app.SPMetrics["response_time"]
 	if config.Debug {
 		log.Printf("[debug]: PollNR decoded JSON: %+v\n", sample)
 	}
-	m.Value = sample.Application.ApplicationSummary.ResponseTime
-	metrics <- m
 
-	m.SPMetricId = app.SPMetrics["throughput"]
-	m.Value = sample.Application.ApplicationSummary.Throughput
-	metrics <- m
+	m := Metric{SPPageId: app.SPPageId, SPApiKey: app.SPApiKey}
 
-	m.SPMetricId = app.SPMetrics["error_rate"]
-	m.Value = sample.Application.ApplicationSummary.ErrorRate
-	metrics <- m
+	if _, ok := app.SPMetrics["response_time"]; ok {
+		if config.Debug {
+			log.Println("[debug]: PollNR: Fetching response_time for", appid)
+		}
+		m.SPMetricId = app.SPMetrics["response_time"]
+		m.Value = sample.Application.ApplicationSummary.ResponseTime
+		metrics <- m
+	}
+
+	if _, ok := app.SPMetrics["throughput"]; ok {
+		if config.Debug {
+			log.Println("[debug]: PollNR: Fetching throughput for nr_app_id", appid)
+		}
+		m.SPMetricId = app.SPMetrics["throughput"]
+		m.Value = sample.Application.ApplicationSummary.Throughput
+		metrics <- m
+	}
+
+	if _, ok := app.SPMetrics["error_rate"]; ok {
+		if config.Debug {
+			log.Println("[debug]: PollNR: Fetching error_rate for", appid)
+		}
+		m.SPMetricId = app.SPMetrics["error_rate"]
+		m.Value = sample.Application.ApplicationSummary.ErrorRate
+		metrics <- m
+	}
 }
 
 func Setup(config Config, apps *[]App) {
