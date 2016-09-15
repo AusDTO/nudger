@@ -24,9 +24,9 @@ On StatusPage, for each of the metrics you want to display (i.e. response time, 
 
 Once you set up a custom data source with a _Display Name_ and _Display Suffix_, you'll be provided with:
 
- - An API key
- - A page id
- - A metric id
+ - An API key (`sp_api_key` in the Nudger config)
+ - A page id (`sp_page_id` in the Nudger config)
+ - A metric id (the value of `metrics[key]` in the Nudger config)
 
 You'll need these to configure Nudger.
 
@@ -36,9 +36,11 @@ To get the application id, from the New Relic console, browse to the application
 
 For example, the application id in https://rpm.newrelic.com/accounts/1246480/applications/12325670 is `12325670`.
 
+This value maps to the `nr_app_id` field in the Nudger config.
+
 To get the API key, from the New Relic console, go to the _Account Settings_, and under _Integrations_ browse to the _API keys_ section.
 
-Reveal the API key, and note it down into the Nudger config.
+Reveal the API key, and note it down into the Nudger config as `nr_api_key`.
 
 ### Nudger config
 
