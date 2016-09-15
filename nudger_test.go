@@ -21,7 +21,7 @@ func MockNewRelic(bind string, requests chan string) {
 }
 
 func MockStatusPage(bind string, requests chan string) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/v1/pages/", func(w http.ResponseWriter, r *http.Request) {
 		var p SPPayload
 		body, _ := ioutil.ReadAll(r.Body)
 		_ = json.Unmarshal(body, &p)
@@ -76,7 +76,7 @@ func TestStatusPagePushing(t *testing.T) {
 
 	// Set up the dispatcher
 	config := Config{
-		SPBaseURL: "http://127.0.0.1:42224",
+		SPBaseURL: "http://127.0.0.1:42224/v1",
 	}
 	metrics := make(chan Metric)
 	go Dispatch(config, metrics)
