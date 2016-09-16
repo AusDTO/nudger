@@ -1,0 +1,3 @@
+test:
+  override:
+    - GOPATH="$(pwd)/_vendor:$GOPATH" go test -v
