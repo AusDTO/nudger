@@ -18,6 +18,8 @@ type Config struct {
 	Interval   time.Duration
 	ConfigPath string
 	Debug      bool
+	SPBaseURL  string
+	NRBaseURL  string
 }
 
 type ApplicationResponse struct {
@@ -61,9 +63,13 @@ type SPData struct {
 	Value     float64 `json:"value"`
 }
 
+type SPPayload struct {
+	Data SPData `json:"data"`
+}
+
 func PollNR(config Config, app App, metrics chan Metric) {
 	appid := strconv.Itoa(app.NRAppId)
-	parts := []string{"https://api.newrelic.com/v2/applications/", appid, ".json"}
+	parts := []string{config.NRBaseURL, appid, ".json"}
 	url := strings.Join(parts, "")
 
 	client := &http.Client{Timeout: time.Second * 5}
@@ -94,6 +100,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 	err = json.Unmarshal(body, &sample)
 	if err != nil {
 		log.Printf("[error] PollNR: couldn't decode json: %s", err)
+		log.Printf("[error] PollNR: raw body: %s\n", body)
 		return
 	}
 	if config.Debug {
@@ -153,17 +160,20 @@ func Setup(config Config, apps *[]App) {
 }
 
 func Dispatch(config Config, metrics chan Metric) {
-	baseUrl := "https://api.statuspage.io/v1"
-
 	for {
 		metric := <-metrics
-
-		url := baseUrl + "/pages/" + metric.SPPageId + "/metrics/" + metric.SPMetricId + "/data.json"
+		parts := []string{config.SPBaseURL, "pages", metric.SPPageId, "metrics", metric.SPMetricId, "data.json"}
+		url := strings.Join(parts, "/")
 		if config.Debug {
 			log.Printf("[debug] Dispatch: URL: %s", url)
 		}
 
-		payload := map[string]SPData{"data": SPData{Timestamp: int32(time.Now().Unix()), Value: metric.Value}}
+		payload := SPPayload{
+			Data: SPData{
+				Timestamp: int32(time.Now().Unix()),
+				Value:     metric.Value,
+			},
+		}
 		body, err := json.Marshal(payload)
 		if err != nil {
 			log.Printf("[error] Dispatch: JSON marshal: %s\n", err)
@@ -202,6 +212,8 @@ func Dispatch(config Config, metrics chan Metric) {
 var (
 	configPath = kingpin.Flag("config", "Path to Nudger config").Default("nudger.json").OverrideDefaultFromEnvar("CONFIG_PATH").String()
 	debug      = kingpin.Flag("debug", "Debug mode").Default("false").OverrideDefaultFromEnvar("DEBUG").Bool()
+	spBaseURL  = kingpin.Flag("statuspage-base-url", "StatusPage API base URL").Default("https://api.statuspage.io/v1").String()
+	nrBaseURL  = kingpin.Flag("newrelic-base-url", "New Relic API base URL").Default("https://api.newrelic.com/v2/applications/").String()
 )
 
 func main() {
@@ -213,6 +225,8 @@ func main() {
 		ConfigPath: *configPath,
 		Timeout:    time.Second * 5,
 		Debug:      *debug,
+		SPBaseURL:  *spBaseURL,
+		NRBaseURL:  *nrBaseURL,
 	}
 	if config.Debug {
 		log.Printf("[debug] Main: config: %+v\n", config)
