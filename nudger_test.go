@@ -97,7 +97,7 @@ func TestStatusPagePushing(t *testing.T) {
 	switch request {
 	// Test the same metric value is received
 	case strconv.FormatFloat(sample.Value, 'E', -1, 64):
-		t.Logf("Received: %s", strconv.FormatFloat(sample.Value, 'E', -1, 64))
+		t.Logf("Received dispatched value: %s", strconv.FormatFloat(sample.Value, 'E', -1, 64))
 	case "false":
 		t.Fatal("Expected dispatch to StatusPage, got nothing after 1 second.")
 	default:
