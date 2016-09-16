@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -15,7 +16,9 @@ func MockNewRelic(bind string, requests chan string) {
 		response := ApplicationResponse{}
 		b, _ := json.Marshal(response)
 		w.Write(b)
-		requests <- "true" // FIXME(auxesis): inject the app id instead
+		parts := strings.Split(r.URL.String(), "/")
+		id := strings.Split(parts[len(parts)-1], ".")[0]
+		requests <- id
 	})
 	log.Fatal(http.ListenAndServe(bind, nil))
 }
@@ -53,8 +56,8 @@ func TestNewRelicPolling(t *testing.T) {
 	request := <-requests
 	switch request {
 	// Test the New Relic API is hit
-	case "true":
-		t.Log("Received request")
+	case strconv.Itoa(app.NRAppId):
+		t.Logf("Received request for app: %d", app.NRAppId)
 	case "false":
 		t.Fatal("Expected request to New Relic, got nothing after 1 second.")
 	default:
