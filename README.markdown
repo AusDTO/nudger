@@ -137,11 +137,12 @@ nudger --help
 
 These arguments can also be configured with environment variables:
 
-| Name        | Description                   | Example               |
-| ----------- | ----------------------------- | --------------------- |
-| DEBUG       | Toggle debug mode.            | `true` or `false`     |
-| CONFIG_PATH | Path to Nudger's config file. | `/etc/nudger.json`    |
-| INTERVAL    | Frequency to poll New Relic.  | `30s` or `5m` or `1h` |
+| Name        | Description                           | Example               |
+| :---------- | :------------------------------------ | :-------------------- |
+| DEBUG       | Toggle debug mode.                    | `true` or `false`     |
+| CONFIG_PATH | Path to Nudger's config file.         | `/etc/nudger.json`    |
+| INTERVAL    | Frequency to poll New Relic.          | `30s` or `5m` or `1h` |
+| PORT        | Where Nudger's stats can be accessed. | `8080`                |
 
 ## Operating
 
@@ -152,7 +153,7 @@ By default Nudger exposes these metrics at [http://localhost:8181/debug/vars](ht
 Along with the standard expvar metrics (`cmdline`, `memstats`), Nudger also exposes the following metrics:
 
 | Name | Type | Description |
-| ---- | ---- | ----------- |
+| :--- | :--- | :---------- |
 | `newrelic.requests` | Counter | Number of requests to New Relic made by Nudger. |
 | `newrelic.apps.response_time` | Counter | Number of times a _response time_ metric was pulled from an application on New Relic. |
 | `newrelic.apps.throughput` | Counter | Number of times a _throughput_ metric was pulled from an application on New Relic. |
