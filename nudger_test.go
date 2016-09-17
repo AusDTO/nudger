@@ -30,6 +30,7 @@ func MockStatusPage(bind string, requests chan string) {
 		_ = json.Unmarshal(body, &p)
 		requests <- strconv.FormatFloat(p.Data.Value, 'E', -1, 64)
 	})
+	log.Println("[debug] binding to", bind)
 	log.Fatal(http.ListenAndServe(bind, nil))
 }
 
