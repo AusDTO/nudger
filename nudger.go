@@ -272,6 +272,7 @@ var (
 	debug      = kingpin.Flag("debug", "Debug mode").Default("false").OverrideDefaultFromEnvar("DEBUG").Bool()
 	spBaseURL  = kingpin.Flag("statuspage-base-url", "StatusPage API base URL").Default("https://api.statuspage.io/v1").String()
 	nrBaseURL  = kingpin.Flag("newrelic-base-url", "New Relic API base URL").Default("https://api.newrelic.com/v2/applications/").String()
+	interval   = kingpin.Flag("interval", "Frequency to poll New Relic").Default("60s").OverrideDefaultFromEnvar("INTERVAL").Duration()
 )
 
 func main() {
@@ -281,7 +282,7 @@ func main() {
 	go Instrumentation()
 
 	config := Config{
-		Interval:   time.Second * 10,
+		Interval:   *interval,
 		ConfigPath: *configPath,
 		Timeout:    time.Second * 5,
 		Debug:      *debug,
