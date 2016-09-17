@@ -114,7 +114,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 	}
 
 	if config.Debug {
-		log.Printf("[debug] PollNR raw body: %s\n", body)
+		log.Printf("[debug]: PollNR raw body: %s\n", body)
 	}
 
 	var sample ApplicationResponse
@@ -126,14 +126,14 @@ func PollNR(config Config, app App, metrics chan Metric) {
 		return
 	}
 	if config.Debug {
-		log.Printf("[debug] PollNR decoded JSON: %+v\n", sample)
+		log.Printf("[debug]: PollNR decoded JSON: %+v\n", sample)
 	}
 
 	m := Metric{SPPageId: app.SPPageId, SPApiKey: app.SPApiKey}
 
 	if _, ok := app.SPMetrics["response_time"]; ok {
 		if config.Debug {
-			log.Println("[debug] PollNR: Fetching response_time for", appid)
+			log.Println("[debug]: PollNR: Fetching response_time for", appid)
 		}
 		newrelicCounts.Add("apps.response_time", 1)
 		m.SPMetricId = app.SPMetrics["response_time"]
@@ -143,7 +143,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 
 	if _, ok := app.SPMetrics["throughput"]; ok {
 		if config.Debug {
-			log.Println("[debug] PollNR: Fetching throughput for nr_app_id", appid)
+			log.Println("[debug]: PollNR: Fetching throughput for nr_app_id", appid)
 		}
 		newrelicCounts.Add("apps.throughput", 1)
 		m.SPMetricId = app.SPMetrics["throughput"]
@@ -153,7 +153,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 
 	if _, ok := app.SPMetrics["error_rate"]; ok {
 		if config.Debug {
-			log.Println("[debug] PollNR: Fetching error_rate for", appid)
+			log.Println("[debug]: PollNR: Fetching error_rate for", appid)
 		}
 		newrelicCounts.Add("apps.error_rate", 1)
 		m.SPMetricId = app.SPMetrics["error_rate"]
