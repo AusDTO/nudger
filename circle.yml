@@ -1,3 +1,6 @@
 dependencies:
   override:
     - env
+test:
+  override:
+    - ./cibuild.sh
