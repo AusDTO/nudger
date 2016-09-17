@@ -26,6 +26,7 @@ type Config struct {
 	Debug      bool
 	SPBaseURL  string
 	NRBaseURL  string
+	Port       string
 }
 
 type ApplicationResponse struct {
@@ -113,7 +114,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 	}
 
 	if config.Debug {
-		log.Printf("[debug]: PollNR raw body: %s\n", body)
+		log.Printf("[debug] PollNR raw body: %s\n", body)
 	}
 
 	var sample ApplicationResponse
@@ -125,14 +126,14 @@ func PollNR(config Config, app App, metrics chan Metric) {
 		return
 	}
 	if config.Debug {
-		log.Printf("[debug]: PollNR decoded JSON: %+v\n", sample)
+		log.Printf("[debug] PollNR decoded JSON: %+v\n", sample)
 	}
 
 	m := Metric{SPPageId: app.SPPageId, SPApiKey: app.SPApiKey}
 
 	if _, ok := app.SPMetrics["response_time"]; ok {
 		if config.Debug {
-			log.Println("[debug]: PollNR: Fetching response_time for", appid)
+			log.Println("[debug] PollNR: Fetching response_time for", appid)
 		}
 		newrelicCounts.Add("apps.response_time", 1)
 		m.SPMetricId = app.SPMetrics["response_time"]
@@ -142,7 +143,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 
 	if _, ok := app.SPMetrics["throughput"]; ok {
 		if config.Debug {
-			log.Println("[debug]: PollNR: Fetching throughput for nr_app_id", appid)
+			log.Println("[debug] PollNR: Fetching throughput for nr_app_id", appid)
 		}
 		newrelicCounts.Add("apps.throughput", 1)
 		m.SPMetricId = app.SPMetrics["throughput"]
@@ -152,7 +153,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 
 	if _, ok := app.SPMetrics["error_rate"]; ok {
 		if config.Debug {
-			log.Println("[debug]: PollNR: Fetching error_rate for", appid)
+			log.Println("[debug] PollNR: Fetching error_rate for", appid)
 		}
 		newrelicCounts.Add("apps.error_rate", 1)
 		m.SPMetricId = app.SPMetrics["error_rate"]
@@ -248,15 +249,11 @@ func Dispatch(config Config, metrics chan Metric) {
 	}
 }
 
-func Instrumentation() {
-	port := ":8181"
-	if len(os.Getenv("PORT")) > 0 {
-		port = ":" + os.Getenv("PORT")
-	}
-	log.Printf("[info] Instrumentation: Exposing runtime statistics at port %s", port[1:])
-	err := http.ListenAndServe(port, nil)
+func Instrumentation(config Config) {
+	log.Printf("[info] Instrumentation: Exposing runtime statistics at port %s", config.Port)
+	err := http.ListenAndServe(":"+config.Port, nil)
 	if err != nil {
-		log.Fatal("[error]", err)
+		log.Fatal("[error] ", err)
 	}
 }
 
@@ -268,18 +265,17 @@ func Poll(config Config, apps []App, metrics chan Metric) {
 }
 
 var (
-	configPath = kingpin.Flag("config", "Path to Nudger config").Default("nudger.json").OverrideDefaultFromEnvar("CONFIG_PATH").String()
-	debug      = kingpin.Flag("debug", "Debug mode").Default("false").OverrideDefaultFromEnvar("DEBUG").Bool()
+	configPath = kingpin.Flag("config", "Path to Nudger's config").Default("nudger.json").OverrideDefaultFromEnvar("CONFIG_PATH").String()
+	debug      = kingpin.Flag("debug", "Toggle debug mode").Default("false").OverrideDefaultFromEnvar("DEBUG").Bool()
 	spBaseURL  = kingpin.Flag("statuspage-base-url", "StatusPage API base URL").Default("https://api.statuspage.io/v1").String()
 	nrBaseURL  = kingpin.Flag("newrelic-base-url", "New Relic API base URL").Default("https://api.newrelic.com/v2/applications/").String()
 	interval   = kingpin.Flag("interval", "Frequency to poll New Relic").Default("60s").OverrideDefaultFromEnvar("INTERVAL").Duration()
+	port       = kingpin.Flag("port", "Where Nudger's stats can be accessed").Default("8181").OverrideDefaultFromEnvar("PORT").String()
 )
 
 func main() {
 	kingpin.Version("1.0.0")
 	kingpin.Parse()
-
-	go Instrumentation()
 
 	config := Config{
 		Interval:   *interval,
@@ -288,10 +284,13 @@ func main() {
 		Debug:      *debug,
 		SPBaseURL:  *spBaseURL,
 		NRBaseURL:  *nrBaseURL,
+		Port:       *port,
 	}
 	if config.Debug {
 		log.Printf("[debug] Main: config: %+v\n", config)
 	}
+
+	go Instrumentation(config)
 
 	var apps []App
 	Setup(config, &apps)

@@ -129,6 +129,20 @@ You can enable extra debugging messages with:
 nudger --debug
 ```
 
+Finally, you can see all the options for configuring Nudger by running:
+
+```
+nudger --help
+```
+
+These arguments can also be configured with environment variables:
+
+| Name        | Description                   | Example               |
+| ----------- | ----------------------------- | --------------------- |
+| DEBUG       | Toggle debug mode.            | `true` or `false`     |
+| CONFIG_PATH | Path to Nudger's config file. | `/etc/nudger.json`    |
+| INTERVAL    | Frequency to poll New Relic.  | `30s` or `5m` or `1h` |
+
 ## Operating
 
 Nudger exposes metrics about how it is behaving via http.
