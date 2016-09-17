@@ -3,35 +3,34 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
-func MockNewRelic(bind string, requests chan string) {
-	http.HandleFunc("/v2/applications/", func(w http.ResponseWriter, r *http.Request) {
+func MockNewRelic(requests chan string) *httptest.Server {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response := ApplicationResponse{}
 		b, _ := json.Marshal(response)
 		w.Write(b)
 		parts := strings.Split(r.URL.String(), "/")
 		id := strings.Split(parts[len(parts)-1], ".")[0]
 		requests <- id
-	})
-	log.Fatal(http.ListenAndServe(bind, nil))
+	}))
+	return ts
 }
 
-func MockStatusPage(bind string, requests chan string) {
-	http.HandleFunc("/v1/pages/", func(w http.ResponseWriter, r *http.Request) {
+func MockStatusPage(requests chan string) *httptest.Server {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var p SPPayload
 		body, _ := ioutil.ReadAll(r.Body)
 		_ = json.Unmarshal(body, &p)
 		requests <- strconv.FormatFloat(p.Data.Value, 'E', -1, 64)
-	})
-	log.Println("[debug] binding to", bind)
-	log.Fatal(http.ListenAndServe(bind, nil))
+	}))
+	return ts
 }
 
 func TestNewRelicPolling(t *testing.T) {
@@ -44,11 +43,11 @@ func TestNewRelicPolling(t *testing.T) {
 	}()
 
 	// Setup a mock StatusPage that will received requests.
-	go MockNewRelic("127.0.0.1:43332", requests)
+	nr := MockNewRelic(requests)
 
 	// Then make a request
 	config := Config{
-		NRBaseURL: "http://127.0.0.1:43332/v2/applications/",
+		NRBaseURL: nr.URL + "/v2/applications/",
 	}
 	metrics := make(chan Metric)
 	app := App{NRAppId: 123456}
@@ -76,11 +75,11 @@ func TestStatusPagePushing(t *testing.T) {
 	}()
 
 	// Setup a mock StatusPage that will received requests.
-	go MockStatusPage("127.0.0.1:42224", requests)
+	sp := MockStatusPage(requests)
 
 	// Set up the dispatcher
 	config := Config{
-		SPBaseURL: "http://127.0.0.1:42224/v1",
+		SPBaseURL: sp.URL + "/v1",
 	}
 	metrics := make(chan Metric)
 	go Dispatch(config, metrics)
