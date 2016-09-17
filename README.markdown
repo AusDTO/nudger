@@ -148,7 +148,7 @@ These arguments can also be configured with environment variables:
 
 Nudger exposes metrics about how it is behaving via http.
 
-By default Nudger exposes these metrics at [http://localhost:8181/debug/vars](http://localhost:8181/debug/vars). You can control this by setting the `PORT` environment variable.
+By default Nudger exposes these metrics at [http://localhost:8181/debug/vars](http://localhost:8181/debug/vars). You can control the port by setting the `PORT` environment variable.
 
 Along with the standard expvar metrics (`cmdline`, `memstats`), Nudger also exposes the following metrics:
 
