@@ -129,6 +129,31 @@ You can enable extra debugging messages with:
 nudger --debug
 ```
 
+## Operating
+
+Nudger exposes metrics about how it is behaving via http.
+
+By default Nudger exposes these metrics at http://localhost:8181/debug/vars. You can control this by setting the `PORT` environment variable.
+
+Along with the standard expvar metrics (`cmdline`, `memstats`), Nudger also exposes the following metrics:
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `newrelic.requests` | Counter | Number of requests to New Relic made by Nudger. |
+| `newrelic.apps.response_time` | Counter | Number of times a _response time_ metric was pulled from an application on New Relic. |
+| `newrelic.apps.throughput` | Counter | Number of times a _throughput_ metric was pulled from an application on New Relic. |
+| `newrelic.apps.error_rate` | Counter | Number of times an _error rate_ metric was pulled from an application on New Relic. |
+| `newrelic.errors.http.new` | Counter | Unsuccessful attempts at creating a request to New Relic. |
+| `newrelic.errors.http.do` | Counter | Unsuccessful attempts at performing a request to New Relic. |
+| `newrelic.errors.http.readbody` | Counter | Unsuccessful attempts at reading a response from New Relic. |
+| `newrelic.errors.json.decode` | Counter | Unsuccessful attempts at decoding JSON response from New Relic. |
+| `statuspage.requests` | Counter | Number of requests to StatusPage made by Nudger. |
+| `statuspage.errors.json.marshal` | Counter | Unsuccessful attempts at encoding JSON request to be sent to StatusPage. |
+| `statuspage.errors.http.new` | Counter | Unsuccessful attempts at creating a request to StatusPage. |
+| `statuspage.errors.http.do` | Counter | Unsuccessful attempts at performing a request to StatusPage. |
+| `statuspage.errors.http.readbody` | Counter | Unsuccessful attempts at reading a response from StatusPage. |
+| `statuspage.errors.http.status` | Counter | Number of times response status from StatusPage was not 201. |
+
 ## Developing
 
 ``` bash

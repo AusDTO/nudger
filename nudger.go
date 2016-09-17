@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"expvar"
 	"gopkg.in/alecthomas/kingpin.v1"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+)
+
+var (
+	newrelicCounts   = expvar.NewMap("newrelic")
+	statuspageCounts = expvar.NewMap("statuspage")
 )
 
 type Config struct {
@@ -68,6 +74,16 @@ type SPPayload struct {
 }
 
 func PollNR(config Config, app App, metrics chan Metric) {
+	// Initialise metrics
+	newrelicCounts.Add("errors.http.new", 0)
+	newrelicCounts.Add("errors.http.do", 0)
+	newrelicCounts.Add("errors.http.readbody", 0)
+	newrelicCounts.Add("errors.json.decode", 0)
+	newrelicCounts.Add("apps.response_time", 0)
+	newrelicCounts.Add("apps.throughput", 0)
+	newrelicCounts.Add("apps.error_rate", 0)
+	newrelicCounts.Add("requests", 0)
+
 	appid := strconv.Itoa(app.NRAppId)
 	parts := []string{config.NRBaseURL, appid, ".json"}
 	url := strings.Join(parts, "")
@@ -76,6 +92,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Printf("[error] PollNR: new request: %s\n", err)
+		newrelicCounts.Add("errors.http.new", 1)
 		return
 	}
 	req.Header.Set("X-Api-Key", app.NRApiKey)
@@ -83,12 +100,15 @@ func PollNR(config Config, app App, metrics chan Metric) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[error] PollNR: client do: %s\n", err)
+		newrelicCounts.Add("errors.http.do", 1)
 		return
 	}
+	newrelicCounts.Add("requests", 1)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("[error] PollNR: couldn't read body: %s\n", err)
+		newrelicCounts.Add("errors.http.readbody", 1)
 		return
 	}
 
@@ -101,6 +121,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 	if err != nil {
 		log.Printf("[error] PollNR: couldn't decode json: %s", err)
 		log.Printf("[error] PollNR: raw body: %s\n", body)
+		newrelicCounts.Add("errors.json.decode", 1)
 		return
 	}
 	if config.Debug {
@@ -113,6 +134,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 		if config.Debug {
 			log.Println("[debug]: PollNR: Fetching response_time for", appid)
 		}
+		newrelicCounts.Add("apps.response_time", 1)
 		m.SPMetricId = app.SPMetrics["response_time"]
 		m.Value = sample.Application.ApplicationSummary.ResponseTime
 		metrics <- m
@@ -122,6 +144,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 		if config.Debug {
 			log.Println("[debug]: PollNR: Fetching throughput for nr_app_id", appid)
 		}
+		newrelicCounts.Add("apps.throughput", 1)
 		m.SPMetricId = app.SPMetrics["throughput"]
 		m.Value = sample.Application.ApplicationSummary.Throughput
 		metrics <- m
@@ -131,6 +154,7 @@ func PollNR(config Config, app App, metrics chan Metric) {
 		if config.Debug {
 			log.Println("[debug]: PollNR: Fetching error_rate for", appid)
 		}
+		newrelicCounts.Add("apps.error_rate", 1)
 		m.SPMetricId = app.SPMetrics["error_rate"]
 		m.Value = sample.Application.ApplicationSummary.ErrorRate
 		metrics <- m
@@ -156,10 +180,18 @@ func Setup(config Config, apps *[]App) {
 		os.Exit(1)
 	}
 
-	log.Printf("[info] Setup: Tracking metrics from %d applications", len(*apps))
+	log.Printf("[info] Setup: Tracking New Relic metrics from %d applications", len(*apps))
 }
 
 func Dispatch(config Config, metrics chan Metric) {
+	// Initialise metrics
+	statuspageCounts.Add("errors.json.marshal", 0)
+	statuspageCounts.Add("errors.http.new", 0)
+	statuspageCounts.Add("errors.http.do", 0)
+	statuspageCounts.Add("errors.http.readbody", 0)
+	statuspageCounts.Add("errors.http.status", 0)
+	statuspageCounts.Add("requests", 0)
+
 	for {
 		metric := <-metrics
 		parts := []string{config.SPBaseURL, "pages", metric.SPPageId, "metrics", metric.SPMetricId, "data.json"}
@@ -177,6 +209,7 @@ func Dispatch(config Config, metrics chan Metric) {
 		body, err := json.Marshal(payload)
 		if err != nil {
 			log.Printf("[error] Dispatch: JSON marshal: %s\n", err)
+			statuspageCounts.Add("errors.json.marshal", 1)
 			continue
 		}
 		if config.Debug {
@@ -187,6 +220,7 @@ func Dispatch(config Config, metrics chan Metric) {
 		req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 		if err != nil {
 			log.Printf("[error] Dispatch: new request: %s\n", err)
+			statuspageCounts.Add("errors.http.new", 1)
 			continue
 		}
 		req.Header.Set("Authorization", "OAuth "+metric.SPApiKey)
@@ -194,18 +228,42 @@ func Dispatch(config Config, metrics chan Metric) {
 		resp, err := client.Do(req)
 		if err != nil {
 			log.Printf("[error] Dispatch: client do: %s\n", err)
+			statuspageCounts.Add("errors.http.do", 1)
 			continue
 		}
+		statuspageCounts.Add("requests", 1)
 
 		body, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Printf("[error] Dispatch: couldn't read body: %s\n", err)
+			statuspageCounts.Add("errors.http.readbody", 1)
 			continue
 		}
 
 		if resp.StatusCode != 201 {
 			log.Printf("[error] Dispatch: StatusPage returned HTTP %d: %s\n", resp.StatusCode, string(body))
+			statuspageCounts.Add("errors.http.status", 1)
+			continue
 		}
+	}
+}
+
+func Instrumentation() {
+	port := ":8181"
+	if len(os.Getenv("PORT")) > 0 {
+		port = ":" + os.Getenv("PORT")
+	}
+	log.Printf("[info] Instrumentation: Exposing runtime statistics at port %s", port[1:])
+	err := http.ListenAndServe(port, nil)
+	if err != nil {
+		log.Fatal("[error]", err)
+	}
+}
+
+func Poll(config Config, apps []App, metrics chan Metric) {
+	log.Printf("[info] Poll: Fetching metrics for %d apps", len(apps))
+	for _, a := range apps {
+		go PollNR(config, a, metrics)
 	}
 }
 
@@ -214,14 +272,17 @@ var (
 	debug      = kingpin.Flag("debug", "Debug mode").Default("false").OverrideDefaultFromEnvar("DEBUG").Bool()
 	spBaseURL  = kingpin.Flag("statuspage-base-url", "StatusPage API base URL").Default("https://api.statuspage.io/v1").String()
 	nrBaseURL  = kingpin.Flag("newrelic-base-url", "New Relic API base URL").Default("https://api.newrelic.com/v2/applications/").String()
+	interval   = kingpin.Flag("interval", "Frequency to poll New Relic").Default("60s").OverrideDefaultFromEnvar("INTERVAL").Duration()
 )
 
 func main() {
 	kingpin.Version("1.0.0")
 	kingpin.Parse()
 
+	go Instrumentation()
+
 	config := Config{
-		Interval:   time.Second * 10,
+		Interval:   *interval,
 		ConfigPath: *configPath,
 		Timeout:    time.Second * 5,
 		Debug:      *debug,
@@ -238,14 +299,14 @@ func main() {
 	metrics := make(chan Metric)
 	go Dispatch(config, metrics)
 
+	// Get metrics the first time
+	Poll(config, apps, metrics)
+
 	tick := time.NewTicker(config.Interval).C
 	for {
 		select {
 		case <-tick:
-			log.Printf("[info] Main: Polling metrics for %d apps", len(apps))
-			for _, a := range apps {
-				go PollNR(config, a, metrics)
-			}
+			Poll(config, apps, metrics)
 		}
 	}
 }
