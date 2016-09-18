@@ -1,6 +1,14 @@
+---
+general:
+   artifacts:
+     - "bin/"
+machine:
+    services:
+          - docker
 dependencies:
   override:
-    - env
+    - docker pull golang:latest
 test:
   override:
-    - ./cibuild.sh
+    - docker_build.sh
+
